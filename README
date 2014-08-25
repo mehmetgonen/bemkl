@@ -1,0 +1,35 @@
+This package contains Matlab and R implementations of the algorithms proposed in "Bayesian Efficient Multiple Kernel Learning", which is appearing in ICML 2012, and "A Bayesian Multiple Kernel Learning Framework for Single and Multiple Output Regression", which is appearing in ECAI 2012.
+
+demo_classification.m file shows how to use the classification algorithm in Matlab.
+demo_classification.R file shows how to use the classification algorithm in R.
+demo_multilabel_classification.m file shows how to use the multilabel classification algorithm in Matlab.
+demo_multilabel_classification.R file shows how to use the multilabel classification algorithm in R.
+demo_regression.m file shows how to use the regression algorithm in Matlab.
+demo_regression.R file shows how to use the regression algorithm in R.
+demo_multioutput_regression.m file shows how to use the multioutput regression algorithm in Matlab.
+demo_multioutput_regression.R file shows how to use the multioutput regression algorithm in R.
+
+BEMKL methods
+-------------
+* bemkl_supervised_classification_variational_train.m => training procedure for classification in Matlab
+* bemkl_supervised_classification_variational_test.m => test procedure for binary classification in Matlab
+* bemkl_supervised_classification_variational_train.R => training procedure for classification in R
+* bemkl_supervised_classification_variational_test.R => test procedure for classification in R
+* bemkl_supervised_multilabel_classification_variational_train.m => training procedure for multilabel classification in Matlab
+* bemkl_supervised_multilabel_classification_variational_test.m => test procedure for binary multilabel classification in Matlab
+* bemkl_supervised_multilabel_classification_variational_train.R => training procedure for multilabel classification in R
+* bemkl_supervised_multilabel_classification_variational_test.R => test procedure for multilabel classification in R
+* bemkl_supervised_regression_variational_train.m => training procedure for regression in Matlab
+* bemkl_supervised_regression_variational_test.m => test procedure for regression in Matlab
+* bemkl_supervised_regression_variational_train.R => training procedure for regression in R
+* bemkl_supervised_regression_variational_test.R => test procedure for regression in R
+* bemkl_supervised_multioutput_regression_variational_train.m => training procedure for multioutput regression in Matlab
+* bemkl_supervised_multioutput_regression_variational_test.m => test procedure for multioutput regression in Matlab
+* bemkl_supervised_multioutput_regression_variational_train.R => training procedure for multioutput regression in R
+* bemkl_supervised_multioutput_regression_variational_test.R => test procedure for multioutput regression in R
+
+If you use any of the algorithms implemented in the package, please cite one of the following papers:
+
+Mehmet Gonen. Bayesian Efficient Multiple Kernel Learning. Proceedings of the 29th International Conference on Machine Learning (ICML 2012), Edinburgh, Scotland, UK, 2012.
+
+Mehmet Gonen. A Bayesian Multiple Kernel Learning Framework for Single and Multiple Output Regression. Proceedings of the 20th European Conference on Artificial Intelligence (ECAI 2012), Montpellier, France, 2012.
