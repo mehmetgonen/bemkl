@@ -19,5 +19,5 @@ bemkl_supervised_multioutput_regression_variational_test <- function(Km, state) 
     Y$covariance[o,] <- 1 / (state$epsilon$shape[o] * state$epsilon$scale[o]) + diag(crossprod(rbind(matrix(1, 1, N), G$mean[,,o]), state$be$covariance[c(o, (L + 1):(L + P)), c(o, (L + 1):(L + P))]) %*% rbind(matrix(1, 1, N), G$mean[,,o]))
   }
 
-  prediction <- list(Y = Y)
+  prediction <- list(G = G, Y = Y)
 }

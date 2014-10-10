@@ -18,5 +18,5 @@ bemkl_supervised_classification_variational_test <- function(Km, state) {
   neg <- pnorm((-state$parameters$margin - f$mean) / f$covariance)
   p <- pos / (pos + neg)
 
-  prediction <- list(f = f, p = p)
+  prediction <- list(G = G, f = f, p = p)
 }

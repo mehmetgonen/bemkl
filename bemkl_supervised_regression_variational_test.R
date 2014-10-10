@@ -14,5 +14,5 @@ bemkl_supervised_regression_variational_test <- function(Km, state) {
   y$mean <- crossprod(rbind(matrix(1, 1, N), G$mean), state$be$mean)
   y$covariance <- 1 / (state$epsilon$shape * state$epsilon$scale) + diag(crossprod(rbind(matrix(1, 1, N), G$mean), state$be$covariance) %*% rbind(matrix(1, 1, N), G$mean))
 
-  prediction <- list(y = y)
+  prediction <- list(G = G, y = y)
 }

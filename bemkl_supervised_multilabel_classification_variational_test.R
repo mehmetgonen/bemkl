@@ -23,5 +23,5 @@ bemkl_supervised_multilabel_classification_variational_test <- function(Km, stat
   neg <- pnorm((-state$parameters$margin - F$mean) / F$covariance)
   P <- pos / (pos + neg)
 
-  prediction <- list(F = F, P = P)
+  prediction <- list(G = G, F = F, P = P)
 }
