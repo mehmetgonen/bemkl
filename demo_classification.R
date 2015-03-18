@@ -35,7 +35,7 @@ parameters$progress <- 0
 parameters$seed <- 1606
 
 #set the standard deviation of intermediate representations
-parameters$sigmag <- 0.1
+parameters$sigma_g <- 0.1
 
 #initialize the kernels and class labels for training
 Ktrain <- ?? #should be an Ntra x Ntra x P matrix containing similarity values between training samples
@@ -45,7 +45,7 @@ ytrain <- ?? #should be an Ntra x 1 matrix containing class labels (contains onl
 state <- bemkl_supervised_classification_variational_train(Ktrain, ytrain, parameters)
 
 #display the kernel weights
-print(state$be$mean[-1])
+print(state$be$mu[-1])
 
 #initialize the kernels for testing
 Ktest <- ?? #should be an Ntra x Ntest x P matrix containing similarity values between training and test samples

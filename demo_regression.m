@@ -44,7 +44,7 @@ ytrain = ??; %should be an Ntra x 1 matrix containing target outputs
 state = bemkl_supervised_regression_variational_train(Ktrain, ytrain, parameters);
 
 %display the kernel weights
-display(state.be.mean(2:end));
+display(state.be.mu(2:end));
 
 %initialize the kernels for testing
 Ktest = ??; %should be an Ntra x Ntest x P matrix containing similarity values between training and test samples
@@ -53,4 +53,4 @@ Ktest = ??; %should be an Ntra x Ntest x P matrix containing similarity values b
 prediction = bemkl_supervised_regression_variational_test(Ktest, state);
 
 %display the predictions
-display(prediction.y.mean);
+display(prediction.y.mu);

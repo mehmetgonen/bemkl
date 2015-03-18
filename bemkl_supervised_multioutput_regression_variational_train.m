@@ -11,22 +11,22 @@ function state = bemkl_supervised_multioutput_regression_variational_train(Km, Y
 
     log2pi = log(2 * pi);
 
-    Lambda.shape = (parameters.alpha_lambda + 0.5) * ones(D, L);
-    Lambda.scale = parameters.beta_lambda * ones(D, L);
-    upsilon.shape = (parameters.alpha_upsilon + 0.5 * N * P) * ones(L, 1);
-    upsilon.scale = parameters.beta_upsilon * ones(L, 1);
-    A.mean = randn(D, L);
-    A.covariance = repmat(eye(D, D), [1, 1, L]);
-    G.mean = randn(P, N, L);
-    G.covariance = repmat(eye(P, P), [1, 1, L]);
-    gamma.shape = (parameters.alpha_gamma + 0.5) * ones(L, 1);
-    gamma.scale = parameters.beta_gamma * ones(L, 1);
-    omega.shape = (parameters.alpha_omega + 0.5) * ones(P, 1);
-    omega.scale = parameters.beta_omega * ones(P, 1);
-    epsilon.shape = (parameters.alpha_epsilon + 0.5 * N) * ones(L, 1);
-    epsilon.scale = parameters.beta_epsilon * ones(L, 1);
-    be.mean = [zeros(L, 1); ones(P, 1)];
-    be.covariance = eye(L + P, L + P);
+    Lambda.alpha = (parameters.alpha_lambda + 0.5) * ones(D, L);
+    Lambda.beta = parameters.beta_lambda * ones(D, L);
+    upsilon.alpha = (parameters.alpha_upsilon + 0.5 * N * P) * ones(L, 1);
+    upsilon.beta = parameters.beta_upsilon * ones(L, 1);
+    A.mu = randn(D, L);
+    A.sigma = repmat(eye(D, D), [1, 1, L]);
+    G.mu = randn(P, N, L);
+    G.sigma = repmat(eye(P, P), [1, 1, L]);
+    gamma.alpha = (parameters.alpha_gamma + 0.5) * ones(L, 1);
+    gamma.beta = parameters.beta_gamma * ones(L, 1);
+    omega.alpha = (parameters.alpha_omega + 0.5) * ones(P, 1);
+    omega.beta = parameters.beta_omega * ones(P, 1);
+    epsilon.alpha = (parameters.alpha_epsilon + 0.5 * N) * ones(L, 1);
+    epsilon.beta = parameters.beta_epsilon * ones(L, 1);
+    be.mu = [zeros(L, 1); ones(P, 1)];
+    be.sigma = eye(L + P, L + P);
 
     KmKm = zeros(D, D);
     for m = 1:P
@@ -38,23 +38,23 @@ function state = bemkl_supervised_multioutput_regression_variational_train(Km, Y
         bounds = zeros(parameters.iteration, 1);
     end
 
-    atimesaT.mean = zeros(D, D, L);
+    atimesaT.mu = zeros(D, D, L);
     for o = 1:L
-        atimesaT.mean(:, :, o) = A.mean(:, o) * A.mean(:, o)' + A.covariance(:, :, o);
+        atimesaT.mu(:, :, o) = A.mu(:, o) * A.mu(:, o)' + A.sigma(:, :, o);
     end
-    GtimesGT.mean = zeros(P, P, L);
+    GtimesGT.mu = zeros(P, P, L);
     for o = 1:L
-        GtimesGT.mean(:, :, o) = G.mean(:, :, o) * G.mean(:, :, o)' + N * G.covariance(:, :, o);
+        GtimesGT.mu(:, :, o) = G.mu(:, :, o) * G.mu(:, :, o)' + N * G.sigma(:, :, o);
     end
-    btimesbT.mean = be.mean(1:L) * be.mean(1:L)' + be.covariance(1:L, 1:L);
-    etimeseT.mean = be.mean(L + 1:L + P) * be.mean(L + 1:L + P)' + be.covariance(L + 1:L + P, L + 1:L + P);
-    etimesb.mean = zeros(P, L);
+    btimesbT.mu = be.mu(1:L) * be.mu(1:L)' + be.sigma(1:L, 1:L);
+    etimeseT.mu = be.mu(L + 1:L + P) * be.mu(L + 1:L + P)' + be.sigma(L + 1:L + P, L + 1:L + P);
+    etimesb.mu = zeros(P, L);
     for o = 1:L
-        etimesb.mean(:, o) = be.mean(L + 1:L + P) * be.mean(o) + be.covariance(L + 1:L + P, o);
+        etimesb.mu(:, o) = be.mu(L + 1:L + P) * be.mu(o) + be.sigma(L + 1:L + P, o);
     end
-    KmtimesGT.mean = zeros(D, L);
+    KmtimesGT.mu = zeros(D, L);
     for o = 1:L
-        KmtimesGT.mean(:, o) = Km * reshape(G.mean(:, :, o)', N * P, 1);
+        KmtimesGT.mu(:, o) = Km * reshape(G.mu(:, :, o)', N * P, 1);
     end
     for iter = 1:parameters.iteration
         if mod(iter, 1) == 0
@@ -66,134 +66,134 @@ function state = bemkl_supervised_multioutput_regression_variational_train(Km, Y
 
         %%%% update Lambda
         for o = 1:L
-            Lambda.scale(:, o) = 1 ./ (1 / parameters.beta_lambda + 0.5 * diag(atimesaT.mean(:, :, o)));
+            Lambda.beta(:, o) = 1 ./ (1 / parameters.beta_lambda + 0.5 * diag(atimesaT.mu(:, :, o)));
         end
         %%%% update upsilon
         for o = 1:L
-            upsilon.scale(o) = 1 / (1 / parameters.beta_upsilon + 0.5 * (sum(diag(GtimesGT.mean(:, :, o))) ...
-                                                                         - 2 * sum(sum(reshape(A.mean(:, o)' * Km, [N, P])' .* G.mean(:, :, o))) ...
-                                                                         + sum(sum(KmKm .* atimesaT.mean(:, :, o)))));
+            upsilon.beta(o) = 1 / (1 / parameters.beta_upsilon + 0.5 * (sum(diag(GtimesGT.mu(:, :, o))) ...
+                                                                         - 2 * sum(sum(reshape(A.mu(:, o)' * Km, [N, P])' .* G.mu(:, :, o))) ...
+                                                                         + sum(sum(KmKm .* atimesaT.mu(:, :, o)))));
         end
         %%%% update A
         for o = 1:L
-            A.covariance(:, :, o) = (diag(Lambda.shape(:, o) .* Lambda.scale(:, o)) + upsilon.shape(o) * upsilon.scale(o) * KmKm) \ eye(D, D);
-            A.mean(:, o) = A.covariance(:, :, o) * (upsilon.shape(o) * upsilon.scale(o) * KmtimesGT.mean(:, o));
-            atimesaT.mean(:, :, o) = A.mean(:, o) * A.mean(:, o)' + A.covariance(:, :, o);
+            A.sigma(:, :, o) = (diag(Lambda.alpha(:, o) .* Lambda.beta(:, o)) + upsilon.alpha(o) * upsilon.beta(o) * KmKm) \ eye(D, D);
+            A.mu(:, o) = A.sigma(:, :, o) * (upsilon.alpha(o) * upsilon.beta(o) * KmtimesGT.mu(:, o));
+            atimesaT.mu(:, :, o) = A.mu(:, o) * A.mu(:, o)' + A.sigma(:, :, o);
         end
         %%%% update G
         for o = 1:L
-            G.covariance(:, :, o) = (upsilon.shape(o) * upsilon.scale(o) * eye(P, P) + epsilon.shape(o) * epsilon.scale(o) * etimeseT.mean) \ eye(P, P);
-            G.mean(:, :, o) = G.covariance(:, :, o) * (upsilon.shape(o) * upsilon.scale(o) * reshape(A.mean(:, o)' * Km, [N, P])' + epsilon.shape(o) * epsilon.scale(o) * (be.mean(L + 1:L + P) * Y(o, :) - repmat(etimesb.mean(:, o), 1, N)));
-            GtimesGT.mean(:, :, o) = G.mean(:, :, o) * G.mean(:, :, o)' + N * G.covariance(:, :, o);
-            KmtimesGT.mean(:, o) = Km * reshape(G.mean(:, :, o)', N * P, 1);
+            G.sigma(:, :, o) = (upsilon.alpha(o) * upsilon.beta(o) * eye(P, P) + epsilon.alpha(o) * epsilon.beta(o) * etimeseT.mu) \ eye(P, P);
+            G.mu(:, :, o) = G.sigma(:, :, o) * (upsilon.alpha(o) * upsilon.beta(o) * reshape(A.mu(:, o)' * Km, [N, P])' + epsilon.alpha(o) * epsilon.beta(o) * (be.mu(L + 1:L + P) * Y(o, :) - repmat(etimesb.mu(:, o), 1, N)));
+            GtimesGT.mu(:, :, o) = G.mu(:, :, o) * G.mu(:, :, o)' + N * G.sigma(:, :, o);
+            KmtimesGT.mu(:, o) = Km * reshape(G.mu(:, :, o)', N * P, 1);
         end        
         %%%% update gamma
-        gamma.scale = 1 ./ (1 / parameters.beta_gamma + 0.5 * diag(btimesbT.mean));
+        gamma.beta = 1 ./ (1 / parameters.beta_gamma + 0.5 * diag(btimesbT.mu));
         %%%% update omega
-        omega.scale = 1 ./ (1 / parameters.beta_omega + 0.5 * diag(etimeseT.mean));
+        omega.beta = 1 ./ (1 / parameters.beta_omega + 0.5 * diag(etimeseT.mu));
         %%%% update epsilon
         for o = 1:L
-            epsilon.scale(o) = 1 / (1 / parameters.beta_epsilon + 0.5 * (Y(o, :) * Y(o, :)' - 2 * Y(o, :) * [ones(1, N); G.mean(:, :, o)]' * be.mean([o, L + 1:L + P]) ...
-                                                                         + N * btimesbT.mean(o, o) ...
-                                                                         + sum(sum(GtimesGT.mean(:, :, o) .* etimeseT.mean)) ...
-                                                                         + 2 * sum(G.mean(:, :, o), 2)' * etimesb.mean(:, o)));
+            epsilon.beta(o) = 1 / (1 / parameters.beta_epsilon + 0.5 * (Y(o, :) * Y(o, :)' - 2 * Y(o, :) * [ones(1, N); G.mu(:, :, o)]' * be.mu([o, L + 1:L + P]) ...
+                                                                         + N * btimesbT.mu(o, o) ...
+                                                                         + sum(sum(GtimesGT.mu(:, :, o) .* etimeseT.mu)) ...
+                                                                         + 2 * sum(G.mu(:, :, o), 2)' * etimesb.mu(:, o)));
         end
         %%%% update b and e
-        be.covariance = [diag(gamma.shape .* gamma.scale) + N * diag(epsilon.shape .* epsilon.scale), repmat(epsilon.shape .* epsilon.scale, 1, P) .* squeeze(sum(G.mean, 2))'; ...
-                         repmat((epsilon.shape .* epsilon.scale)', P, 1) .* squeeze(sum(G.mean, 2)), diag(omega.shape .* omega.scale)];
+        be.sigma = [diag(gamma.alpha .* gamma.beta) + N * diag(epsilon.alpha .* epsilon.beta), repmat(epsilon.alpha .* epsilon.beta, 1, P) .* squeeze(sum(G.mu, 2))'; ...
+                         repmat((epsilon.alpha .* epsilon.beta)', P, 1) .* squeeze(sum(G.mu, 2)), diag(omega.alpha .* omega.beta)];
         for o = 1:L
-            be.covariance(L + 1:L + P, L + 1:L + P) = be.covariance(L + 1:L + P, L + 1:L + P) + epsilon.shape(o) * epsilon.scale(o) * GtimesGT.mean(:, :, o);
+            be.sigma(L + 1:L + P, L + 1:L + P) = be.sigma(L + 1:L + P, L + 1:L + P) + epsilon.alpha(o) * epsilon.beta(o) * GtimesGT.mu(:, :, o);
         end
-        be.covariance = be.covariance \ eye(L + P, L + P);
-        be.mean = zeros(L + P, 1);
-        be.mean(1:L) = (epsilon.shape .* epsilon.scale) .* sum(Y, 2);
+        be.sigma = be.sigma \ eye(L + P, L + P);
+        be.mu = zeros(L + P, 1);
+        be.mu(1:L) = (epsilon.alpha .* epsilon.beta) .* sum(Y, 2);
         for o = 1:L
-            be.mean(L + 1:L + P) = be.mean(L + 1:L + P) + epsilon.shape(o) * epsilon.scale(o) * G.mean(:, :, o) * Y(o, :)';
+            be.mu(L + 1:L + P) = be.mu(L + 1:L + P) + epsilon.alpha(o) * epsilon.beta(o) * G.mu(:, :, o) * Y(o, :)';
         end
-        be.mean = be.covariance * be.mean;
-        btimesbT.mean = be.mean(1:L) * be.mean(1:L)' + be.covariance(1:L, 1:L);
-        etimeseT.mean = be.mean(L + 1:L + P) * be.mean(L + 1:L + P)' + be.covariance(L + 1:L + P, L + 1:L + P);
+        be.mu = be.sigma * be.mu;
+        btimesbT.mu = be.mu(1:L) * be.mu(1:L)' + be.sigma(1:L, 1:L);
+        etimeseT.mu = be.mu(L + 1:L + P) * be.mu(L + 1:L + P)' + be.sigma(L + 1:L + P, L + 1:L + P);
         for o = 1:L
-            etimesb.mean(:, o) = be.mean(L + 1:L + P) * be.mean(o) + be.covariance(L + 1:L + P, o);
+            etimesb.mu(:, o) = be.mu(L + 1:L + P) * be.mu(o) + be.sigma(L + 1:L + P, o);
         end
         
         if parameters.progress == 1
             lb = 0;
 
             %%%% p(Lambda)
-            lb = lb + sum(sum((parameters.alpha_lambda - 1) * (psi(Lambda.shape) + log(Lambda.scale)) ...
-                              - Lambda.shape .* Lambda.scale / parameters.beta_lambda ...
+            lb = lb + sum(sum((parameters.alpha_lambda - 1) * (psi(Lambda.alpha) + log(Lambda.beta)) ...
+                              - Lambda.alpha .* Lambda.beta / parameters.beta_lambda ...
                               - gammaln(parameters.alpha_lambda) ...
                               - parameters.alpha_lambda * log(parameters.beta_lambda)));
             %%%% p(upsilon)
-            lb = lb + sum((parameters.alpha_upsilon - 1) * (psi(upsilon.shape) + log(upsilon.scale)) ...
-                          - upsilon.shape .* upsilon.scale / parameters.beta_upsilon ...
+            lb = lb + sum((parameters.alpha_upsilon - 1) * (psi(upsilon.alpha) + log(upsilon.beta)) ...
+                          - upsilon.alpha .* upsilon.beta / parameters.beta_upsilon ...
                           - gammaln(parameters.alpha_upsilon) ...
                           - parameters.alpha_upsilon * log(parameters.beta_upsilon));
             %%%% p(A | Lambda)
             for o = 1:L
-                lb = lb - 0.5 * sum(Lambda.shape(:, o) .* Lambda.scale(:, o) .* diag(atimesaT.mean(:, :, o))) ...
-                        - 0.5 * (D * log2pi - sum(log(Lambda.shape(:, o) .* Lambda.scale(:, o))));
+                lb = lb - 0.5 * sum(Lambda.alpha(:, o) .* Lambda.beta(:, o) .* diag(atimesaT.mu(:, :, o))) ...
+                        - 0.5 * (D * log2pi - sum(log(Lambda.alpha(:, o) .* Lambda.beta(:, o))));
             end
             %%%% p(G | A, Km, upsilon)
             for o = 1:L
-                lb = lb - 0.5 * sum(diag(GtimesGT.mean(:, :, o))) * upsilon.shape(o) * upsilon.scale(o) ...
-                        + (A.mean(:, o)' * KmtimesGT.mean(:, o)) * upsilon.shape(o) * upsilon.scale(o) ...
-                        - 0.5 * sum(sum(KmKm .* atimesaT.mean(:, :, o))) * upsilon.shape(o) * upsilon.scale(o) ...
-                        - 0.5 * N * P * (log2pi - log(upsilon.shape(o) * upsilon.scale(o)));
+                lb = lb - 0.5 * sum(diag(GtimesGT.mu(:, :, o))) * upsilon.alpha(o) * upsilon.beta(o) ...
+                        + (A.mu(:, o)' * KmtimesGT.mu(:, o)) * upsilon.alpha(o) * upsilon.beta(o) ...
+                        - 0.5 * sum(sum(KmKm .* atimesaT.mu(:, :, o))) * upsilon.alpha(o) * upsilon.beta(o) ...
+                        - 0.5 * N * P * (log2pi - log(upsilon.alpha(o) * upsilon.beta(o)));
             end
             %%%% p(gamma)
-            lb = lb + sum((parameters.alpha_gamma - 1) * (psi(gamma.shape) + log(gamma.scale)) ...
-                          - gamma.shape .* gamma.scale / parameters.beta_gamma ...
+            lb = lb + sum((parameters.alpha_gamma - 1) * (psi(gamma.alpha) + log(gamma.beta)) ...
+                          - gamma.alpha .* gamma.beta / parameters.beta_gamma ...
                           - gammaln(parameters.alpha_gamma) ...
                           - parameters.alpha_gamma * log(parameters.beta_gamma));
             %%%% p(b | gamma)
-            lb = lb - 0.5 * sum(gamma.shape .* gamma.scale .* diag(btimesbT.mean)) ...
-                    - 0.5 * (L * log2pi - sum(log(gamma.shape .* gamma.scale)));
+            lb = lb - 0.5 * sum(gamma.alpha .* gamma.beta .* diag(btimesbT.mu)) ...
+                    - 0.5 * (L * log2pi - sum(log(gamma.alpha .* gamma.beta)));
             %%%% p(omega)
-            lb = lb + sum((parameters.alpha_omega - 1) * (psi(omega.shape) + log(omega.scale)) ...
-                          - omega.shape .* omega.scale / parameters.beta_omega ...
+            lb = lb + sum((parameters.alpha_omega - 1) * (psi(omega.alpha) + log(omega.beta)) ...
+                          - omega.alpha .* omega.beta / parameters.beta_omega ...
                           - gammaln(parameters.alpha_omega) ...
                           - parameters.alpha_omega * log(parameters.beta_omega));
             %%%% p(e | omega)
-            lb = lb - 0.5 * sum(omega.shape .* omega.scale .* diag(etimeseT.mean)) ...
-                    - 0.5 * (P * log2pi - sum(log(omega.shape .* omega.scale)));
+            lb = lb - 0.5 * sum(omega.alpha .* omega.beta .* diag(etimeseT.mu)) ...
+                    - 0.5 * (P * log2pi - sum(log(omega.alpha .* omega.beta)));
             %%%% p(epsilon)
-            lb = lb + sum((parameters.alpha_epsilon - 1) * (psi(epsilon.shape) + log(epsilon.scale)) ...
-                          - epsilon.shape .* epsilon.scale / parameters.beta_epsilon ...
+            lb = lb + sum((parameters.alpha_epsilon - 1) * (psi(epsilon.alpha) + log(epsilon.beta)) ...
+                          - epsilon.alpha .* epsilon.beta / parameters.beta_epsilon ...
                           - gammaln(parameters.alpha_epsilon) ...
                           - parameters.alpha_epsilon * log(parameters.beta_epsilon));
             %%%% p(Y | b, e, G, epsilon)
             for o = 1:L
-                lb = lb - 0.5 * (Y(o, :) * Y(o, :)') * epsilon.shape(o) * epsilon.scale(o) ...
-                        + (Y(o, :) * (G.mean(:, :, o)' * be.mean(L + 1:L + P))) * epsilon.shape(o) * epsilon.scale(o) ...
-                        + sum(be.mean(o) * Y(o, :)) * epsilon.shape(o) * epsilon.scale(o) ...
-                        - 0.5 * sum(sum(etimeseT.mean .* GtimesGT.mean(:, :, o))) * epsilon.shape(o) * epsilon.scale(o) ...
-                        - sum(G.mean(:, :, o)' * etimesb.mean(:, o)) * epsilon.shape(o) * epsilon.scale(o) ...
-                        - 0.5 * N * btimesbT.mean(o, o) * epsilon.shape(o) * epsilon.scale(o) ...
-                        - 0.5 * N * (log2pi - log(epsilon.shape(o) * epsilon.scale(o)));
+                lb = lb - 0.5 * (Y(o, :) * Y(o, :)') * epsilon.alpha(o) * epsilon.beta(o) ...
+                        + (Y(o, :) * (G.mu(:, :, o)' * be.mu(L + 1:L + P))) * epsilon.alpha(o) * epsilon.beta(o) ...
+                        + sum(be.mu(o) * Y(o, :)) * epsilon.alpha(o) * epsilon.beta(o) ...
+                        - 0.5 * sum(sum(etimeseT.mu .* GtimesGT.mu(:, :, o))) * epsilon.alpha(o) * epsilon.beta(o) ...
+                        - sum(G.mu(:, :, o)' * etimesb.mu(:, o)) * epsilon.alpha(o) * epsilon.beta(o) ...
+                        - 0.5 * N * btimesbT.mu(o, o) * epsilon.alpha(o) * epsilon.beta(o) ...
+                        - 0.5 * N * (log2pi - log(epsilon.alpha(o) * epsilon.beta(o)));
             end
 
             %%%% q(Lambda)
-            lb = lb + sum(sum(Lambda.shape + log(Lambda.scale) + gammaln(Lambda.shape) + (1 - Lambda.shape) .* psi(Lambda.shape)));
+            lb = lb + sum(sum(Lambda.alpha + log(Lambda.beta) + gammaln(Lambda.alpha) + (1 - Lambda.alpha) .* psi(Lambda.alpha)));
             %%%% q(upsilon)
-            lb = lb + sum(upsilon.shape + log(upsilon.scale) + gammaln(upsilon.shape) + (1 - upsilon.shape) .* psi(upsilon.shape));
+            lb = lb + sum(upsilon.alpha + log(upsilon.beta) + gammaln(upsilon.alpha) + (1 - upsilon.alpha) .* psi(upsilon.alpha));
             %%%% q(A)
             for o = 1:L
-                lb = lb + 0.5 * (D * (log2pi + 1) + logdet(A.covariance(:, :, o)));
+                lb = lb + 0.5 * (D * (log2pi + 1) + logdet(A.sigma(:, :, o)));
             end
             %%%% q(G)
             for o = 1:L
-                lb = lb + 0.5 * N * (P * (log2pi + 1) + logdet(G.covariance(:, :, o)));
+                lb = lb + 0.5 * N * (P * (log2pi + 1) + logdet(G.sigma(:, :, o)));
             end
             %%%% q(gamma)
-            lb = lb + sum(gamma.shape + log(gamma.scale) + gammaln(gamma.shape) + (1 - gamma.shape) .* psi(gamma.shape));
+            lb = lb + sum(gamma.alpha + log(gamma.beta) + gammaln(gamma.alpha) + (1 - gamma.alpha) .* psi(gamma.alpha));
             %%%% q(omega)
-            lb = lb + sum(omega.shape + log(omega.scale) + gammaln(omega.shape) + (1 - omega.shape) .* psi(omega.shape));
+            lb = lb + sum(omega.alpha + log(omega.beta) + gammaln(omega.alpha) + (1 - omega.alpha) .* psi(omega.alpha));
             %%%% q(epsilon)
-            lb = lb + sum(epsilon.shape + log(epsilon.scale) + gammaln(epsilon.shape) + (1 - epsilon.shape) .* psi(epsilon.shape));
+            lb = lb + sum(epsilon.alpha + log(epsilon.beta) + gammaln(epsilon.alpha) + (1 - epsilon.alpha) .* psi(epsilon.alpha));
             %%%% q(b, e)
-            lb = lb + 0.5 * ((L + P) * (log2pi + 1) + logdet(be.covariance));
+            lb = lb + 0.5 * ((L + P) * (log2pi + 1) + logdet(be.sigma));
 
             bounds(iter) = lb;
         end

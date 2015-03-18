@@ -32,7 +32,7 @@ parameters.progress = 0;
 parameters.seed = 1606;
 
 %set the standard deviation of intermediate representations
-parameters.sigmag = 0.1;
+parameters.sigma_g = 0.1;
 
 %set the number of labels
 L = ??;
@@ -47,7 +47,7 @@ Ytrain = ??; %should be an L x Ntra matrix containing class labels (contains onl
 state = bemkl_supervised_multilabel_classification_variational_train(Ktrain, Ytrain, parameters);
 
 %display the kernel weights
-display(state.be.mean((L + 1):(L + P)));
+display(state.be.mu((L + 1):(L + P)));
 
 %initialize the kernels for testing
 Ktest = ??; %should be an Ntra x Ntest x P matrix containing similarity values between training and test samples

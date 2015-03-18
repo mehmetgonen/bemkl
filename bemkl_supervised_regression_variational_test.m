@@ -4,13 +4,13 @@ function prediction = bemkl_supervised_regression_variational_test(Km, state)
     N = size(Km, 2);
     P = size(Km, 3);
 
-    prediction.G.mean = zeros(P, N);
-    prediction.G.covariance = zeros(P, N);
+    prediction.G.mu = zeros(P, N);
+    prediction.G.sigma = zeros(P, N);
     for m = 1:P
-        prediction.G.mean(m, :) = state.a.mean' * Km(:, :, m);
-        prediction.G.covariance(m, :) = 1 / (state.upsilon.shape * state.upsilon.scale) + diag(Km(:, :, m)' * state.a.covariance * Km(:, :, m));
+        prediction.G.mu(m, :) = state.a.mu' * Km(:, :, m);
+        prediction.G.sigma(m, :) = 1 / (state.upsilon.alpha * state.upsilon.beta) + diag(Km(:, :, m)' * state.a.sigma * Km(:, :, m));
     end
     
-    prediction.y.mean = [ones(1, N); prediction.G.mean]' * state.be.mean;
-    prediction.y.covariance = 1 / (state.epsilon.shape * state.epsilon.scale) + diag([ones(1, N); prediction.G.mean]' * state.be.covariance * [ones(1, N); prediction.G.mean]);
+    prediction.y.mu = [ones(1, N); prediction.G.mu]' * state.be.mu;
+    prediction.y.sigma = 1 / (state.epsilon.alpha * state.epsilon.beta) + diag([ones(1, N); prediction.G.mu]' * state.be.sigma * [ones(1, N); prediction.G.mu]);
 end

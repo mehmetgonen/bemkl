@@ -8,27 +8,27 @@ function state = bemkl_supervised_multilabel_classification_variational_train(Km
     N = size(Km, 2);
     P = size(Km, 3);
     L = size(Y, 1);
-    sigmag = parameters.sigmag;
+    sigma_g = parameters.sigma_g;
 
     log2pi = log(2 * pi);
 
-    Lambda.shape = (parameters.alpha_lambda + 0.5) * ones(D, L);
-    Lambda.scale = parameters.beta_lambda * ones(D, L);
-    A.mean = randn(D, L);
-    A.covariance = repmat(eye(D, D), [1, 1, L]);
-    G.mean = (abs(randn(P, N, L)) + parameters.margin);
+    Lambda.alpha = (parameters.alpha_lambda + 0.5) * ones(D, L);
+    Lambda.beta = parameters.beta_lambda * ones(D, L);
+    A.mu = randn(D, L);
+    A.sigma = repmat(eye(D, D), [1, 1, L]);
+    G.mu = (abs(randn(P, N, L)) + parameters.margin);
     for m = 1:P
-        G.mean(m, :, :) = reshape(G.mean(m, :, :), N, L) .* sign(Y');
+        G.mu(m, :, :) = reshape(G.mu(m, :, :), N, L) .* sign(Y');
     end
-    G.covariance = eye(P, P);
-    gamma.shape = (parameters.alpha_gamma + 0.5) * ones(L, 1);
-    gamma.scale = parameters.beta_gamma * ones(L, 1);
-    omega.shape = (parameters.alpha_omega + 0.5) * ones(P, 1);
-    omega.scale = parameters.beta_omega * ones(P, 1);
-    be.mean = [zeros(L, 1); ones(P, 1)];
-    be.covariance = eye(L + P, L + P);
-    F.mean = (abs(randn(L, N)) + parameters.margin) .* sign(Y);
-    F.covariance = ones(L, N);
+    G.sigma = eye(P, P);
+    gamma.alpha = (parameters.alpha_gamma + 0.5) * ones(L, 1);
+    gamma.beta = parameters.beta_gamma * ones(L, 1);
+    omega.alpha = (parameters.alpha_omega + 0.5) * ones(P, 1);
+    omega.beta = parameters.beta_omega * ones(P, 1);
+    be.mu = [zeros(L, 1); ones(P, 1)];
+    be.sigma = eye(L + P, L + P);
+    F.mu = (abs(randn(L, N)) + parameters.margin) .* sign(Y);
+    F.sigma = ones(L, N);
     
     KmKm = zeros(D, D);
     for m = 1:P
@@ -45,23 +45,23 @@ function state = bemkl_supervised_multilabel_classification_variational_train(Km
         bounds = zeros(parameters.iteration, 1);
     end
 
-    atimesaT.mean = zeros(D, D, L);
+    atimesaT.mu = zeros(D, D, L);
     for o = 1:L
-        atimesaT.mean(:, :, o) = A.mean(:, o) * A.mean(:, o)' + A.covariance(:, :, o);
+        atimesaT.mu(:, :, o) = A.mu(:, o) * A.mu(:, o)' + A.sigma(:, :, o);
     end
-    GtimesGT.mean = zeros(P, P, L);
+    GtimesGT.mu = zeros(P, P, L);
     for o = 1:L
-        GtimesGT.mean(:, :, o) = G.mean(:, :, o) * G.mean(:, :, o)' + N * G.covariance;
+        GtimesGT.mu(:, :, o) = G.mu(:, :, o) * G.mu(:, :, o)' + N * G.sigma;
     end
-    btimesbT.mean = be.mean(1:L) * be.mean(1:L)' + be.covariance(1:L, 1:L);
-    etimeseT.mean = be.mean(L + 1:L + P) * be.mean(L + 1:L + P)' + be.covariance(L + 1:L + P, L + 1:L + P);
-    etimesb.mean = zeros(P, L);
+    btimesbT.mu = be.mu(1:L) * be.mu(1:L)' + be.sigma(1:L, 1:L);
+    etimeseT.mu = be.mu(L + 1:L + P) * be.mu(L + 1:L + P)' + be.sigma(L + 1:L + P, L + 1:L + P);
+    etimesb.mu = zeros(P, L);
     for o = 1:L
-        etimesb.mean(:, o) = be.mean(L + 1:L + P) * be.mean(o) + be.covariance(L + 1:L + P, o);
+        etimesb.mu(:, o) = be.mu(L + 1:L + P) * be.mu(o) + be.sigma(L + 1:L + P, o);
     end
-    KmtimesGT.mean = zeros(D, L);
+    KmtimesGT.mu = zeros(D, L);
     for o = 1:L
-        KmtimesGT.mean(:, o) = Km * reshape(G.mean(:, :, o)', N * P, 1);
+        KmtimesGT.mu(:, o) = Km * reshape(G.mu(:, :, o)', N * P, 1);
     end
     for iter = 1:parameters.iteration
         if mod(iter, 1) == 0
@@ -73,118 +73,118 @@ function state = bemkl_supervised_multilabel_classification_variational_train(Km
 
         %%%% update Lambda
         for o = 1:L
-            Lambda.scale(:, o) = 1 ./ (1 / parameters.beta_lambda + 0.5 * diag(atimesaT.mean(:, :, o)));
+            Lambda.beta(:, o) = 1 ./ (1 / parameters.beta_lambda + 0.5 * diag(atimesaT.mu(:, :, o)));
         end
         %%%% update A
         for o = 1:L
-            A.covariance(:, :, o) = (diag(Lambda.shape(:, o) .* Lambda.scale(:, o)) + KmKm / sigmag^2) \ eye(D, D);
-            A.mean(:, o) = A.covariance(:, :, o) * KmtimesGT.mean(:, o) / sigmag^2;
-            atimesaT.mean(:, :, o) = A.mean(:, o) * A.mean(:, o)' + A.covariance(:, :, o);
+            A.sigma(:, :, o) = (diag(Lambda.alpha(:, o) .* Lambda.beta(:, o)) + KmKm / sigma_g^2) \ eye(D, D);
+            A.mu(:, o) = A.sigma(:, :, o) * KmtimesGT.mu(:, o) / sigma_g^2;
+            atimesaT.mu(:, :, o) = A.mu(:, o) * A.mu(:, o)' + A.sigma(:, :, o);
         end
         %%%% update G
-        G.covariance = (eye(P, P) / sigmag^2 + etimeseT.mean) \ eye(P, P);
+        G.sigma = (eye(P, P) / sigma_g^2 + etimeseT.mu) \ eye(P, P);
         for o = 1:L
-            G.mean(:, :, o) = G.covariance * (reshape(A.mean(:, o)' * Km, [N, P])' / sigmag^2 + be.mean(L + 1:L + P) * F.mean(o, :) - repmat(etimesb.mean(:, o), 1, N));
-            GtimesGT.mean(:, :, o) = G.mean(:, :, o) * G.mean(:, :, o)' + N * G.covariance;
-            KmtimesGT.mean(:, o) = Km * reshape(G.mean(:, :, o)', N * P, 1);
+            G.mu(:, :, o) = G.sigma * (reshape(A.mu(:, o)' * Km, [N, P])' / sigma_g^2 + be.mu(L + 1:L + P) * F.mu(o, :) - repmat(etimesb.mu(:, o), 1, N));
+            GtimesGT.mu(:, :, o) = G.mu(:, :, o) * G.mu(:, :, o)' + N * G.sigma;
+            KmtimesGT.mu(:, o) = Km * reshape(G.mu(:, :, o)', N * P, 1);
         end
         %%%% update gamma
-        gamma.scale = 1 ./ (1 / parameters.beta_gamma + 0.5 * diag(btimesbT.mean));
+        gamma.beta = 1 ./ (1 / parameters.beta_gamma + 0.5 * diag(btimesbT.mu));
         %%%% update omega
-        omega.scale = 1 ./ (1 / parameters.beta_omega + 0.5 * diag(etimeseT.mean));
+        omega.beta = 1 ./ (1 / parameters.beta_omega + 0.5 * diag(etimeseT.mu));
         %%%% update b and e
-        be.covariance = [diag(gamma.shape .* gamma.scale) + N * eye(L, L), squeeze(sum(G.mean, 2))'; ...
-                         squeeze(sum(G.mean, 2)), diag(omega.shape .* omega.scale)];
+        be.sigma = [diag(gamma.alpha .* gamma.beta) + N * eye(L, L), squeeze(sum(G.mu, 2))'; ...
+                         squeeze(sum(G.mu, 2)), diag(omega.alpha .* omega.beta)];
         for o = 1:L
-            be.covariance(L + 1:L + P, L + 1:L + P) = be.covariance(L + 1:L + P, L + 1:L + P) + GtimesGT.mean(:, :, o);
+            be.sigma(L + 1:L + P, L + 1:L + P) = be.sigma(L + 1:L + P, L + 1:L + P) + GtimesGT.mu(:, :, o);
         end
-        be.covariance = be.covariance \ eye(L + P, L + P);
-        be.mean = zeros(L + P, 1);
-        be.mean(1:L) = sum(F.mean, 2);
+        be.sigma = be.sigma \ eye(L + P, L + P);
+        be.mu = zeros(L + P, 1);
+        be.mu(1:L) = sum(F.mu, 2);
         for o = 1:L
-            be.mean(L + 1:L + P) = be.mean(L + 1:L + P) + G.mean(:, :, o) * F.mean(o, :)';
+            be.mu(L + 1:L + P) = be.mu(L + 1:L + P) + G.mu(:, :, o) * F.mu(o, :)';
         end
-        be.mean = be.covariance * be.mean;
-        btimesbT.mean = be.mean(1:L) * be.mean(1:L)' + be.covariance(1:L, 1:L);
-        etimeseT.mean = be.mean(L + 1:L + P) * be.mean(L + 1:L + P)' + be.covariance(L + 1:L + P, L + 1:L + P);
+        be.mu = be.sigma * be.mu;
+        btimesbT.mu = be.mu(1:L) * be.mu(1:L)' + be.sigma(1:L, 1:L);
+        etimeseT.mu = be.mu(L + 1:L + P) * be.mu(L + 1:L + P)' + be.sigma(L + 1:L + P, L + 1:L + P);
         for o = 1:L
-            etimesb.mean(:, o) = be.mean(L + 1:L + P) * be.mean(o) + be.covariance(L + 1:L + P, o);
+            etimesb.mu(:, o) = be.mu(L + 1:L + P) * be.mu(o) + be.sigma(L + 1:L + P, o);
         end
         %%%% update F
         output = zeros(L, N);
         for o = 1:L
-            output(o, :) = [ones(1, N); G.mean(:, :, o)]' * be.mean([o, L + 1:L + P]);
+            output(o, :) = [ones(1, N); G.mu(:, :, o)]' * be.mu([o, L + 1:L + P]);
         end
         alpha_norm = lower - output;
         beta_norm = upper - output;
         normalization = normcdf(beta_norm) - normcdf(alpha_norm);
         normalization(normalization == 0) = 1;
-        F.mean = output + (normpdf(alpha_norm) - normpdf(beta_norm)) ./ normalization;
-        F.covariance = 1 + (alpha_norm .* normpdf(alpha_norm) - beta_norm .* normpdf(beta_norm)) ./ normalization - (normpdf(alpha_norm) - normpdf(beta_norm)).^2 ./ normalization.^2;
+        F.mu = output + (normpdf(alpha_norm) - normpdf(beta_norm)) ./ normalization;
+        F.sigma = 1 + (alpha_norm .* normpdf(alpha_norm) - beta_norm .* normpdf(beta_norm)) ./ normalization - (normpdf(alpha_norm) - normpdf(beta_norm)).^2 ./ normalization.^2;
 
         if parameters.progress == 1
             lb = 0;
 
             %%%% p(Lambda)
-            lb = lb + sum(sum((parameters.alpha_lambda - 1) * (psi(Lambda.shape) + log(Lambda.scale)) ...
-                              - Lambda.shape .* Lambda.scale / parameters.beta_lambda ...
+            lb = lb + sum(sum((parameters.alpha_lambda - 1) * (psi(Lambda.alpha) + log(Lambda.beta)) ...
+                              - Lambda.alpha .* Lambda.beta / parameters.beta_lambda ...
                               - gammaln(parameters.alpha_lambda) ...
                               - parameters.alpha_lambda * log(parameters.beta_lambda)));
             %%%% p(A | Lambda)
             for o = 1:L
-                lb = lb - 0.5 * sum(Lambda.shape(:, o) .* Lambda.scale(:, o) .* diag(atimesaT.mean(:, :, o))) ...
-                        - 0.5 * (D * log2pi - sum(log(Lambda.shape(:, o) .* Lambda.scale(:, o))));
+                lb = lb - 0.5 * sum(Lambda.alpha(:, o) .* Lambda.beta(:, o) .* diag(atimesaT.mu(:, :, o))) ...
+                        - 0.5 * (D * log2pi - sum(log(Lambda.alpha(:, o) .* Lambda.beta(:, o))));
             end
             %%%% p(G | A, Km)
             for o = 1:L
-                lb = lb - 0.5 * sum(diag(GtimesGT.mean(:, :, o))) ...
-                        + A.mean(:, o)' * KmtimesGT.mean(:, o) ...
-                        - 0.5 * sum(sum(KmKm .* atimesaT.mean(:, :, o))) ...
-                        - 0.5 * N * P * (log2pi + 2 * log(sigmag));
+                lb = lb - 0.5 * sum(diag(GtimesGT.mu(:, :, o))) ...
+                        + A.mu(:, o)' * KmtimesGT.mu(:, o) ...
+                        - 0.5 * sum(sum(KmKm .* atimesaT.mu(:, :, o))) ...
+                        - 0.5 * N * P * (log2pi + 2 * log(sigma_g));
             end
             %%%% p(gamma)
-            lb = lb + sum((parameters.alpha_gamma - 1) * (psi(gamma.shape) + log(gamma.scale)) ...
-                          - gamma.shape .* gamma.scale / parameters.beta_gamma ...
+            lb = lb + sum((parameters.alpha_gamma - 1) * (psi(gamma.alpha) + log(gamma.beta)) ...
+                          - gamma.alpha .* gamma.beta / parameters.beta_gamma ...
                           - gammaln(parameters.alpha_gamma) ...
                           - parameters.alpha_gamma * log(parameters.beta_gamma));
             %%%% p(b | gamma)
-            lb = lb - 0.5 * sum(gamma.shape .* gamma.scale .* diag(btimesbT.mean)) ...
-                    - 0.5 * (L * log2pi - sum(log(gamma.shape .* gamma.scale)));
+            lb = lb - 0.5 * sum(gamma.alpha .* gamma.beta .* diag(btimesbT.mu)) ...
+                    - 0.5 * (L * log2pi - sum(log(gamma.alpha .* gamma.beta)));
             %%%% p(omega)
-            lb = lb + sum((parameters.alpha_omega - 1) * (psi(omega.shape) + log(omega.scale)) ...
-                          - omega.shape .* omega.scale / parameters.beta_omega ...
+            lb = lb + sum((parameters.alpha_omega - 1) * (psi(omega.alpha) + log(omega.beta)) ...
+                          - omega.alpha .* omega.beta / parameters.beta_omega ...
                           - gammaln(parameters.alpha_omega) ...
                           - parameters.alpha_omega * log(parameters.beta_omega));
             %%%% p(e | omega)
-            lb = lb - 0.5 * sum(omega.shape .* omega.scale .* diag(etimeseT.mean)) ...
-                    - 0.5 * (P * log2pi - sum(log(omega.shape .* omega.scale)));
+            lb = lb - 0.5 * sum(omega.alpha .* omega.beta .* diag(etimeseT.mu)) ...
+                    - 0.5 * (P * log2pi - sum(log(omega.alpha .* omega.beta)));
             %%%% p(F | b, e, G)
             for o = 1:L
-                lb = lb - 0.5 * (F.mean(o, :) * F.mean(o, :)' + sum(F.covariance(o, :))) ...
-                        + F.mean(o, :) * (G.mean(:, :, o)' * be.mean(L + 1:L + P)) ...
-                        + sum(be.mean(o) * F.mean(o, :)) ...
-                        - 0.5 * sum(sum(etimeseT.mean .* GtimesGT.mean(:, :, o))) ...
-                        - sum(G.mean(:, :, o)' * etimesb.mean(:, o)) ...
-                        - 0.5 * N * btimesbT.mean(o, o) ...
+                lb = lb - 0.5 * (F.mu(o, :) * F.mu(o, :)' + sum(F.sigma(o, :))) ...
+                        + F.mu(o, :) * (G.mu(:, :, o)' * be.mu(L + 1:L + P)) ...
+                        + sum(be.mu(o) * F.mu(o, :)) ...
+                        - 0.5 * sum(sum(etimeseT.mu .* GtimesGT.mu(:, :, o))) ...
+                        - sum(G.mu(:, :, o)' * etimesb.mu(:, o)) ...
+                        - 0.5 * N * btimesbT.mu(o, o) ...
                         - 0.5 * N * log2pi;
             end
 
             %%%% q(Lambda)
-            lb = lb + sum(sum(Lambda.shape + log(Lambda.scale) + gammaln(Lambda.shape) + (1 - Lambda.shape) .* psi(Lambda.shape)));
+            lb = lb + sum(sum(Lambda.alpha + log(Lambda.beta) + gammaln(Lambda.alpha) + (1 - Lambda.alpha) .* psi(Lambda.alpha)));
             %%%% q(A)
             for o = 1:L
-                lb = lb + 0.5 * (D * (log2pi + 1) + logdet(A.covariance(:, :, o)));
+                lb = lb + 0.5 * (D * (log2pi + 1) + logdet(A.sigma(:, :, o)));
             end
             %%%% q(G)
-            lb = lb + 0.5 * L * (N * (P * (log2pi + 1) + logdet(G.covariance)));
+            lb = lb + 0.5 * L * (N * (P * (log2pi + 1) + logdet(G.sigma)));
             %%%% q(gamma)
-            lb = lb + sum(gamma.shape + log(gamma.scale) + gammaln(gamma.shape) + (1 - gamma.shape) .* psi(gamma.shape));
+            lb = lb + sum(gamma.alpha + log(gamma.beta) + gammaln(gamma.alpha) + (1 - gamma.alpha) .* psi(gamma.alpha));
             %%%% q(omega)
-            lb = lb + sum(omega.shape + log(omega.scale) + gammaln(omega.shape) + (1 - omega.shape) .* psi(omega.shape));
+            lb = lb + sum(omega.alpha + log(omega.beta) + gammaln(omega.alpha) + (1 - omega.alpha) .* psi(omega.alpha));
             %%%% q(b, e)
-            lb = lb + 0.5 * ((L + P) * (log2pi + 1) + logdet(be.covariance));
+            lb = lb + 0.5 * ((L + P) * (log2pi + 1) + logdet(be.sigma));
             %%%% q(F)
-            lb = lb + 0.5 * sum(sum(log2pi + F.covariance)) + sum(sum(log(normalization)));
+            lb = lb + 0.5 * sum(sum(log2pi + F.sigma)) + sum(sum(log(normalization)));
 
             bounds(iter) = lb;
         end

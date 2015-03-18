@@ -49,7 +49,7 @@ ytrain = ??; %should be an L X Ntra matrix containing target outputs where L is 
 state = bemkl_supervised_multioutput_regression_variational_train(Ktrain, ytrain, parameters);
 
 %display the kernel weights
-display(state.be.mean((L + 1):(L + P)));
+display(state.be.mu((L + 1):(L + P)));
 
 %initialize the kernels for testing
 Ktest = ??; %should be an Ntra x Ntest x P matrix containing similarity values between training and test samples
@@ -58,4 +58,4 @@ Ktest = ??; %should be an Ntra x Ntest x P matrix containing similarity values b
 prediction = bemkl_supervised_multioutput_regression_variational_test(Ktest, state);
 
 %display the predictions
-display(prediction.Y.mean);
+display(prediction.Y.mu);

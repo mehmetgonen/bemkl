@@ -11,20 +11,20 @@ bemkl_supervised_multilabel_classification_variational_train <- function(Km, Y, 
   N <- dim(Km)[2]
   P <- dim(Km)[3]
   L <- dim(Y)[1]
-  sigmag <- parameters$sigmag
+  sigma_g <- parameters$sigma_g
 
   log2pi <- log(2 * pi)
 
-  Lambda <- list(shape = matrix(parameters$alpha_lambda + 0.5, D, L), scale = matrix(parameters$beta_lambda, D, L))
-  A <- list(mean = matrix(rnorm(D * L), D, L), covariance = array(diag(1, D, D), c(D, D, L)))
-  G <- list(mean = (abs(array(rnorm(P * N * L), c(P, N, L))) + parameters$margin), covariance = diag(1, P, P))
+  Lambda <- list(alpha = matrix(parameters$alpha_lambda + 0.5, D, L), beta = matrix(parameters$beta_lambda, D, L))
+  A <- list(mu = matrix(rnorm(D * L), D, L), sigma = array(diag(1, D, D), c(D, D, L)))
+  G <- list(mu = (abs(array(rnorm(P * N * L), c(P, N, L))) + parameters$margin), sigma = diag(1, P, P))
   for (m in 1:P) {
-    G$mean[m,,] <- G$mean[m,,] * sign(t(Y))
+    G$mu[m,,] <- G$mu[m,,] * sign(t(Y))
   }
-  gamma <- list(shape = matrix(parameters$alpha_gamma + 0.5, L, 1), scale = matrix(parameters$beta_gamma, L, 1))
-  omega <- list(shape = matrix(parameters$alpha_omega + 0.5, P, 1), scale = matrix(parameters$beta_omega, P, 1))
-  be <- list(mean = rbind(matrix(0, L, 1), matrix(1, P, 1)), covariance = diag(1, L + P, L + P))
-  F <- list(mean = (abs(matrix(rnorm(L * N), L, N)) + parameters$margin) * sign(Y), covariance = matrix(1, L, N))
+  gamma <- list(alpha = matrix(parameters$alpha_gamma + 0.5, L, 1), beta = matrix(parameters$beta_gamma, L, 1))
+  omega <- list(alpha = matrix(parameters$alpha_omega + 0.5, P, 1), beta = matrix(parameters$beta_omega, P, 1))
+  be <- list(mu = rbind(matrix(0, L, 1), matrix(1, P, 1)), sigma = diag(1, L + P, L + P))
+  F <- list(mu = (abs(matrix(rnorm(L * N), L, N)) + parameters$margin) * sign(Y), sigma = matrix(1, L, N))
 
   KmKm <- matrix(0, D, D)
   for (m in 1:P) {
@@ -41,117 +41,117 @@ bemkl_supervised_multilabel_classification_variational_train <- function(Km, Y, 
     bounds <- matrix(0, parameters$iteration, 1)
   }
 
-  atimesaT.mean <- array(0, c(D, D, L))
+  atimesaT.mu <- array(0, c(D, D, L))
   for (o in 1:L) {
-    atimesaT.mean[,,o] <- tcrossprod(A$mean[,o], A$mean[,o]) + A$covariance[,,o]
+    atimesaT.mu[,,o] <- tcrossprod(A$mu[,o], A$mu[,o]) + A$sigma[,,o]
   }
-  GtimesGT.mean <- array(0, c(P, P, L))
+  GtimesGT.mu <- array(0, c(P, P, L))
   for (o in 1:L) {
-    GtimesGT.mean[,,o] <- tcrossprod(G$mean[,,o], G$mean[,,o]) + N * G$covariance
+    GtimesGT.mu[,,o] <- tcrossprod(G$mu[,,o], G$mu[,,o]) + N * G$sigma
   }
-  btimesbT.mean <- tcrossprod(be$mean[1:L], be$mean[1:L]) + be$covariance[1:L, 1:L]
-  etimeseT.mean <- tcrossprod(be$mean[(L + 1):(L + P)], be$mean[(L + 1):(L + P)]) + be$covariance[(L + 1):(L + P), (L + 1):(L + P)]
-  etimesb.mean <- matrix(0, P, L)
+  btimesbT.mu <- tcrossprod(be$mu[1:L], be$mu[1:L]) + be$sigma[1:L, 1:L]
+  etimeseT.mu <- tcrossprod(be$mu[(L + 1):(L + P)], be$mu[(L + 1):(L + P)]) + be$sigma[(L + 1):(L + P), (L + 1):(L + P)]
+  etimesb.mu <- matrix(0, P, L)
   for (o in 1:L) {
-    etimesb.mean[,o] <- be$mean[(L + 1):(L + P)] * be$mean[o] + be$covariance[(L + 1):(L + P), o]
+    etimesb.mu[,o] <- be$mu[(L + 1):(L + P)] * be$mu[o] + be$sigma[(L + 1):(L + P), o]
   }
-  KmtimesGT.mean <- matrix(0, D, L)
+  KmtimesGT.mu <- matrix(0, D, L)
   for (o in 1:L) {
-    KmtimesGT.mean[,o] <- Km %*% matrix(t(G$mean[,,o]), N * P, 1)
+    KmtimesGT.mu[,o] <- Km %*% matrix(t(G$mu[,,o]), N * P, 1)
   }
   for (iter in 1:parameters$iteration) {
     # update Lambda
     for (o in 1:L) {
-      Lambda$scale[,o] <- 1 / (1 / parameters$beta_lambda + 0.5 * diag(atimesaT.mean[,,o]))
+      Lambda$beta[,o] <- 1 / (1 / parameters$beta_lambda + 0.5 * diag(atimesaT.mu[,,o]))
     }
     # update A
     for (o in 1:L) {
-      A$covariance[,,o] <- chol2inv(chol(diag(as.vector(Lambda$shape[,o] * Lambda$scale[,o]), D, D) + KmKm / sigmag^2))
-      A$mean[,o] <- A$covariance[,,o] %*% KmtimesGT.mean[,o] / sigmag^2
-      atimesaT.mean[,,o] <- tcrossprod(A$mean[,o], A$mean[,o]) + A$covariance[,,o]
+      A$sigma[,,o] <- chol2inv(chol(diag(as.vector(Lambda$alpha[,o] * Lambda$beta[,o]), D, D) + KmKm / sigma_g^2))
+      A$mu[,o] <- A$sigma[,,o] %*% KmtimesGT.mu[,o] / sigma_g^2
+      atimesaT.mu[,,o] <- tcrossprod(A$mu[,o], A$mu[,o]) + A$sigma[,,o]
     }
     # update G
-    G$covariance <- chol2inv(chol(diag(1, P, P) / sigmag^2 + etimeseT.mean))
+    G$sigma <- chol2inv(chol(diag(1, P, P) / sigma_g^2 + etimeseT.mu))
     for (o in 1:L) {
-      G$mean[,,o] <- G$covariance %*% (t(matrix(crossprod(A$mean[,o], Km), N, P)) / sigmag^2 + tcrossprod(be$mean[(L + 1):(L + P)], F$mean[o,]) - matrix(etimesb.mean[,o], P, N, byrow = FALSE))
-      GtimesGT.mean[,,o] <- tcrossprod(G$mean[,,o], G$mean[,,o]) + N * G$covariance
-      KmtimesGT.mean[,o] <- Km %*% matrix(t(G$mean[,,o]), N * P, 1)
+      G$mu[,,o] <- G$sigma %*% (t(matrix(crossprod(A$mu[,o], Km), N, P)) / sigma_g^2 + tcrossprod(be$mu[(L + 1):(L + P)], F$mu[o,]) - matrix(etimesb.mu[,o], P, N, byrow = FALSE))
+      GtimesGT.mu[,,o] <- tcrossprod(G$mu[,,o], G$mu[,,o]) + N * G$sigma
+      KmtimesGT.mu[,o] <- Km %*% matrix(t(G$mu[,,o]), N * P, 1)
     }
     # update gamma
-    gamma$scale <- 1 / (1 / parameters$beta_gamma + 0.5 * diag(btimesbT.mean))
+    gamma$beta <- 1 / (1 / parameters$beta_gamma + 0.5 * diag(btimesbT.mu))
     # update omega
-    omega$scale <- 1 / (1 / parameters$beta_omega + 0.5 * diag(etimeseT.mean))
+    omega$beta <- 1 / (1 / parameters$beta_omega + 0.5 * diag(etimeseT.mu))
     # update b and e
-    be$covariance <- rbind(cbind(diag(as.vector(gamma$shape * gamma$scale), L, L) + N * diag(1, L, L), t(apply(G$mean, c(1, 3), sum))), cbind(apply(G$mean, c(1, 3), sum), diag(as.vector(omega$shape * omega$scale), P, P)))
+    be$sigma <- rbind(cbind(diag(as.vector(gamma$alpha * gamma$beta), L, L) + N * diag(1, L, L), t(apply(G$mu, c(1, 3), sum))), cbind(apply(G$mu, c(1, 3), sum), diag(as.vector(omega$alpha * omega$beta), P, P)))
     for (o in 1:L) {
-      be$covariance[(L + 1):(L + P), (L + 1):(L + P)] <- be$covariance[(L + 1):(L + P), (L + 1):(L + P)] + GtimesGT.mean[,,o]
+      be$sigma[(L + 1):(L + P), (L + 1):(L + P)] <- be$sigma[(L + 1):(L + P), (L + 1):(L + P)] + GtimesGT.mu[,,o]
     }
-    be$covariance <- chol2inv(chol(be$covariance))
-    be$mean <- matrix(0, L + P, 1)
-    be$mean[1:L] <- rowSums(F$mean)
+    be$sigma <- chol2inv(chol(be$sigma))
+    be$mu <- matrix(0, L + P, 1)
+    be$mu[1:L] <- rowSums(F$mu)
     for (o in 1:L) {
-      be$mean[(L + 1):(L + P)] <- be$mean[(L + 1):(L + P)] + G$mean[,,o] %*% F$mean[o,]
+      be$mu[(L + 1):(L + P)] <- be$mu[(L + 1):(L + P)] + G$mu[,,o] %*% F$mu[o,]
     }
-    be$mean <- be$covariance %*% be$mean
-    btimesbT.mean <- tcrossprod(be$mean[1:L], be$mean[1:L]) + be$covariance[1:L, 1:L]
-    etimeseT.mean <- tcrossprod(be$mean[(L + 1):(L + P)], be$mean[(L + 1):(L + P)]) + be$covariance[(L + 1):(L + P), (L + 1):(L + P)]
+    be$mu <- be$sigma %*% be$mu
+    btimesbT.mu <- tcrossprod(be$mu[1:L], be$mu[1:L]) + be$sigma[1:L, 1:L]
+    etimeseT.mu <- tcrossprod(be$mu[(L + 1):(L + P)], be$mu[(L + 1):(L + P)]) + be$sigma[(L + 1):(L + P), (L + 1):(L + P)]
     for (o in 1:L) {
-        etimesb.mean[,o] <- be$mean[(L + 1):(L + P)] * be$mean[o] + be$covariance[(L + 1):(L + P), o]
+        etimesb.mu[,o] <- be$mu[(L + 1):(L + P)] * be$mu[o] + be$sigma[(L + 1):(L + P), o]
     }
     # update F
     output <- matrix(0, L, N)
     for (o in 1:L) {
-      output[o,] <- crossprod(rbind(matrix(1, 1, N), G$mean[,,o]), be$mean[c(o, (L + 1):(L + P))])
+      output[o,] <- crossprod(rbind(matrix(1, 1, N), G$mu[,,o]), be$mu[c(o, (L + 1):(L + P))])
     }
     alpha_norm <- lower - output
     beta_norm <- upper - output
     normalization <- pnorm(beta_norm) - pnorm(alpha_norm)
     normalization[which(normalization == 0)] <- 1
-    F$mean <- output + (dnorm(alpha_norm) - dnorm(beta_norm)) / normalization
-    F$covariance <- 1 + (alpha_norm * dnorm(alpha_norm) - beta_norm * dnorm(beta_norm)) / normalization - (dnorm(alpha_norm) - dnorm(beta_norm))^2 / normalization^2
+    F$mu <- output + (dnorm(alpha_norm) - dnorm(beta_norm)) / normalization
+    F$sigma <- 1 + (alpha_norm * dnorm(alpha_norm) - beta_norm * dnorm(beta_norm)) / normalization - (dnorm(alpha_norm) - dnorm(beta_norm))^2 / normalization^2
 
     if (parameters$progress == 1) {
       lb <- 0
 
       # p(Lambda)
-      lb <- lb + sum((parameters$alpha_lambda - 1) * (digamma(Lambda$shape) + log(Lambda$scale)) - Lambda$shape * Lambda$scale / parameters$beta_lambda - lgamma(parameters$alpha_lambda) - parameters$alpha_lambda * log(parameters$beta_lambda))
+      lb <- lb + sum((parameters$alpha_lambda - 1) * (digamma(Lambda$alpha) + log(Lambda$beta)) - Lambda$alpha * Lambda$beta / parameters$beta_lambda - lgamma(parameters$alpha_lambda) - parameters$alpha_lambda * log(parameters$beta_lambda))
       # p(A | Lambda)
       for (o in 1:L) {
-        lb <- lb - 0.5 * sum(as.vector(Lambda$shape[,o] * Lambda$scale[,o]) * diag(atimesaT.mean[,,o])) - 0.5 * (D * log2pi - sum(log(Lambda$shape[,o] * Lambda$scale[,o])))
+        lb <- lb - 0.5 * sum(as.vector(Lambda$alpha[,o] * Lambda$beta[,o]) * diag(atimesaT.mu[,,o])) - 0.5 * (D * log2pi - sum(log(Lambda$alpha[,o] * Lambda$beta[,o])))
       }
       # p(G | A, Km)
       for (o in 1:L) {
-        lb <- lb - 0.5 * sum(diag(GtimesGT.mean[,,o])) + crossprod(A$mean[,o], KmtimesGT.mean[,o]) - 0.5 * sum(KmKm * atimesaT.mean[,,o]) - 0.5 * N * P * (log2pi + 2 * log(sigmag))
+        lb <- lb - 0.5 * sum(diag(GtimesGT.mu[,,o])) + crossprod(A$mu[,o], KmtimesGT.mu[,o]) - 0.5 * sum(KmKm * atimesaT.mu[,,o]) - 0.5 * N * P * (log2pi + 2 * log(sigma_g))
       }
       # p(gamma)
-      lb <- lb + sum((parameters$alpha_gamma - 1) * (digamma(gamma$shape) + log(gamma$scale)) - gamma$shape * gamma$scale / parameters$beta_gamma - lgamma(parameters$alpha_gamma) - parameters$alpha_gamma * log(parameters$beta_gamma))
+      lb <- lb + sum((parameters$alpha_gamma - 1) * (digamma(gamma$alpha) + log(gamma$beta)) - gamma$alpha * gamma$beta / parameters$beta_gamma - lgamma(parameters$alpha_gamma) - parameters$alpha_gamma * log(parameters$beta_gamma))
       # p(b | gamma)
-      lb <- lb - 0.5 * sum(as.vector(gamma$shape * gamma$scale) * diag(btimesbT.mean)) - 0.5 * (L * log2pi - sum(log(gamma$shape * gamma$scale)))
+      lb <- lb - 0.5 * sum(as.vector(gamma$alpha * gamma$beta) * diag(btimesbT.mu)) - 0.5 * (L * log2pi - sum(log(gamma$alpha * gamma$beta)))
       # p(omega)
-      lb <- lb + sum((parameters$alpha_omega - 1) * (digamma(omega$shape) + log(omega$scale)) - omega$shape * omega$scale / parameters$beta_omega - lgamma(parameters$alpha_omega) - parameters$alpha_omega * log(parameters$beta_omega))
+      lb <- lb + sum((parameters$alpha_omega - 1) * (digamma(omega$alpha) + log(omega$beta)) - omega$alpha * omega$beta / parameters$beta_omega - lgamma(parameters$alpha_omega) - parameters$alpha_omega * log(parameters$beta_omega))
       # p(e | omega)
-      lb <- lb - 0.5 * sum(as.vector(omega$shape * omega$scale) * diag(etimeseT.mean)) - 0.5 * (P * log2pi - sum(log(omega$shape * omega$scale)))
+      lb <- lb - 0.5 * sum(as.vector(omega$alpha * omega$beta) * diag(etimeseT.mu)) - 0.5 * (P * log2pi - sum(log(omega$alpha * omega$beta)))
       # p(F | b, e, G)
       for (o in 1:L) {
-        lb <- lb - 0.5 * (crossprod(F$mean[o,], F$mean[o,]) + sum(F$covariance[o,])) + crossprod(F$mean[o,], crossprod(G$mean[,,o], be$mean[(L + 1):(L + P)])) + sum(be$mean[o] * F$mean[o,]) - 0.5 * sum(etimeseT.mean * GtimesGT.mean[,,o]) - sum(crossprod(G$mean[,,o], etimesb.mean[,o])) - 0.5 * N * btimesbT.mean[o,o] - 0.5 * N * log2pi
+        lb <- lb - 0.5 * (crossprod(F$mu[o,], F$mu[o,]) + sum(F$sigma[o,])) + crossprod(F$mu[o,], crossprod(G$mu[,,o], be$mu[(L + 1):(L + P)])) + sum(be$mu[o] * F$mu[o,]) - 0.5 * sum(etimeseT.mu * GtimesGT.mu[,,o]) - sum(crossprod(G$mu[,,o], etimesb.mu[,o])) - 0.5 * N * btimesbT.mu[o,o] - 0.5 * N * log2pi
       }
 
       # q(Lambda)
-      lb <- lb + sum(Lambda$shape + log(Lambda$scale) + lgamma(Lambda$shape) + (1 - Lambda$shape) * digamma(Lambda$shape))
+      lb <- lb + sum(Lambda$alpha + log(Lambda$beta) + lgamma(Lambda$alpha) + (1 - Lambda$alpha) * digamma(Lambda$alpha))
       # q(A)
       for (o in 1:L) {
-        lb <- lb + 0.5 * (D * (log2pi + 1) + logdet(A$covariance[,,o]))
+        lb <- lb + 0.5 * (D * (log2pi + 1) + logdet(A$sigma[,,o]))
       }
       # q(G)
-      lb <- lb + 0.5 * L * (N * (P * (log2pi + 1) + logdet(G$covariance)))
+      lb <- lb + 0.5 * L * (N * (P * (log2pi + 1) + logdet(G$sigma)))
       # q(gamma)
-      lb <- lb + sum(gamma$shape + log(gamma$scale) + lgamma(gamma$shape) + (1 - gamma$shape) * digamma(gamma$shape))
+      lb <- lb + sum(gamma$alpha + log(gamma$beta) + lgamma(gamma$alpha) + (1 - gamma$alpha) * digamma(gamma$alpha))
       # q(omega)
-      lb <- lb + sum(omega$shape + log(omega$scale) + lgamma(omega$shape) + (1 - omega$shape) * digamma(omega$shape))
+      lb <- lb + sum(omega$alpha + log(omega$beta) + lgamma(omega$alpha) + (1 - omega$alpha) * digamma(omega$alpha))
       # q(b, e)
-      lb <- lb + 0.5 * ((L + P) * (log2pi + 1) + logdet(be$covariance))
+      lb <- lb + 0.5 * ((L + P) * (log2pi + 1) + logdet(be$sigma))
       # q(F)
-      lb <- lb + 0.5 * sum(log2pi + F$covariance) + sum(log(normalization))
+      lb <- lb + 0.5 * sum(log2pi + F$sigma) + sum(log(normalization))
 
       bounds[iter] <- lb
     }
