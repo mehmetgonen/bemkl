@@ -117,7 +117,7 @@ bemkl_supervised_multilabel_classification_variational_train <- function(Km, Y, 
       lb <- lb + sum((parameters$alpha_lambda - 1) * (digamma(Lambda$alpha) + log(Lambda$beta)) - Lambda$alpha * Lambda$beta / parameters$beta_lambda - lgamma(parameters$alpha_lambda) - parameters$alpha_lambda * log(parameters$beta_lambda))
       # p(A | Lambda)
       for (o in 1:L) {
-        lb <- lb - 0.5 * sum(as.vector(Lambda$alpha[,o] * Lambda$beta[,o]) * diag(atimesaT.mu[,,o])) - 0.5 * (D * log2pi - sum(log(Lambda$alpha[,o] * Lambda$beta[,o])))
+        lb <- lb - 0.5 * sum(as.vector(Lambda$alpha[,o] * Lambda$beta[,o]) * diag(atimesaT.mu[,,o])) - 0.5 * (D * log2pi - sum(digamma(Lambda$alpha[,o]) + log(Lambda$beta[,o])))
       }
       # p(G | A, Km)
       for (o in 1:L) {
@@ -126,11 +126,11 @@ bemkl_supervised_multilabel_classification_variational_train <- function(Km, Y, 
       # p(gamma)
       lb <- lb + sum((parameters$alpha_gamma - 1) * (digamma(gamma$alpha) + log(gamma$beta)) - gamma$alpha * gamma$beta / parameters$beta_gamma - lgamma(parameters$alpha_gamma) - parameters$alpha_gamma * log(parameters$beta_gamma))
       # p(b | gamma)
-      lb <- lb - 0.5 * sum(as.vector(gamma$alpha * gamma$beta) * diag(btimesbT.mu)) - 0.5 * (L * log2pi - sum(log(gamma$alpha * gamma$beta)))
+      lb <- lb - 0.5 * sum(as.vector(gamma$alpha * gamma$beta) * diag(btimesbT.mu)) - 0.5 * (L * log2pi - sum(digamma(gamma$alpha) + log(gamma$beta)))
       # p(omega)
       lb <- lb + sum((parameters$alpha_omega - 1) * (digamma(omega$alpha) + log(omega$beta)) - omega$alpha * omega$beta / parameters$beta_omega - lgamma(parameters$alpha_omega) - parameters$alpha_omega * log(parameters$beta_omega))
       # p(e | omega)
-      lb <- lb - 0.5 * sum(as.vector(omega$alpha * omega$beta) * diag(etimeseT.mu)) - 0.5 * (P * log2pi - sum(log(omega$alpha * omega$beta)))
+      lb <- lb - 0.5 * sum(as.vector(omega$alpha * omega$beta) * diag(etimeseT.mu)) - 0.5 * (P * log2pi - sum(digamma(omega$alpha) + log(omega$beta)))
       # p(F | b, e, G)
       for (o in 1:L) {
         lb <- lb - 0.5 * (crossprod(F$mu[o,], F$mu[o,]) + sum(F$sigma[o,])) + crossprod(F$mu[o,], crossprod(G$mu[,,o], be$mu[(L + 1):(L + P)])) + sum(be$mu[o] * F$mu[o,]) - 0.5 * sum(etimeseT.mu * GtimesGT.mu[,,o]) - sum(crossprod(G$mu[,,o], etimesb.mu[,o])) - 0.5 * N * btimesbT.mu[o,o] - 0.5 * N * log2pi

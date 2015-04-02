@@ -133,7 +133,7 @@ function state = bemkl_supervised_multilabel_classification_variational_train(Km
             %%%% p(A | Lambda)
             for o = 1:L
                 lb = lb - 0.5 * sum(Lambda.alpha(:, o) .* Lambda.beta(:, o) .* diag(atimesaT.mu(:, :, o))) ...
-                        - 0.5 * (D * log2pi - sum(log(Lambda.alpha(:, o) .* Lambda.beta(:, o))));
+                        - 0.5 * (D * log2pi - sum(psi(Lambda.alpha(:, o)) + log(Lambda.beta(:, o))));
             end
             %%%% p(G | A, Km)
             for o = 1:L
@@ -149,7 +149,7 @@ function state = bemkl_supervised_multilabel_classification_variational_train(Km
                           - parameters.alpha_gamma * log(parameters.beta_gamma));
             %%%% p(b | gamma)
             lb = lb - 0.5 * sum(gamma.alpha .* gamma.beta .* diag(btimesbT.mu)) ...
-                    - 0.5 * (L * log2pi - sum(log(gamma.alpha .* gamma.beta)));
+                    - 0.5 * (L * log2pi - sum(psi(gamma.alpha) + log(gamma.beta)));
             %%%% p(omega)
             lb = lb + sum((parameters.alpha_omega - 1) * (psi(omega.alpha) + log(omega.beta)) ...
                           - omega.alpha .* omega.beta / parameters.beta_omega ...
@@ -157,7 +157,7 @@ function state = bemkl_supervised_multilabel_classification_variational_train(Km
                           - parameters.alpha_omega * log(parameters.beta_omega));
             %%%% p(e | omega)
             lb = lb - 0.5 * sum(omega.alpha .* omega.beta .* diag(etimeseT.mu)) ...
-                    - 0.5 * (P * log2pi - sum(log(omega.alpha .* omega.beta)));
+                    - 0.5 * (P * log2pi - sum(psi(omega.alpha) + log(omega.beta)));
             %%%% p(F | b, e, G)
             for o = 1:L
                 lb = lb - 0.5 * (F.mu(o, :) * F.mu(o, :)' + sum(F.sigma(o, :))) ...
