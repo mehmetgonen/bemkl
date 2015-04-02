@@ -121,7 +121,7 @@ bemkl_supervised_multilabel_classification_variational_train <- function(Km, Y, 
       }
       # p(G | A, Km)
       for (o in 1:L) {
-        lb <- lb - 0.5 * sum(diag(GtimesGT.mu[,,o])) + crossprod(A$mu[,o], KmtimesGT.mu[,o]) - 0.5 * sum(KmKm * atimesaT.mu[,,o]) - 0.5 * N * P * (log2pi + 2 * log(sigma_g))
+        lb <- lb - 0.5 * sigma_g^-2 * sum(diag(GtimesGT.mu[,,o])) + sigma_g^-2 * crossprod(A$mu[,o], KmtimesGT.mu[,o]) - 0.5 * sigma_g^-2 * sum(KmKm * atimesaT.mu[,,o]) - 0.5 * N * P * (log2pi + 2 * log(sigma_g))
       }
       # p(gamma)
       lb <- lb + sum((parameters$alpha_gamma - 1) * (digamma(gamma$alpha) + log(gamma$beta)) - gamma$alpha * gamma$beta / parameters$beta_gamma - lgamma(parameters$alpha_gamma) - parameters$alpha_gamma * log(parameters$beta_gamma))
