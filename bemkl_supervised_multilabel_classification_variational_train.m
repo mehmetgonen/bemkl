@@ -1,5 +1,3 @@
-% Mehmet Gonen (mehmet.gonen@gmail.com)
-
 function state = bemkl_supervised_multilabel_classification_variational_train(Km, Y, parameters)
     rand('state', parameters.seed); %#ok<RAND>
     randn('state', parameters.seed); %#ok<RAND>

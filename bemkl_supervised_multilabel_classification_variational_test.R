@@ -1,5 +1,3 @@
-# Mehmet Gonen (mehmet.gonen@gmail.com)
-
 bemkl_supervised_multilabel_classification_variational_test <- function(Km, state) {
   N <- dim(Km)[2]
   P <- dim(Km)[3]
